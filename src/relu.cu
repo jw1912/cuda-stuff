@@ -1,6 +1,4 @@
-#include <iostream>
-#include <random>
-#include <vector>
+#include "util.cu"
 
 __host__ __device__ float relu(const float in)
 {
@@ -46,57 +44,21 @@ __global__ void reluKernel3(const size_t size, const float *in, float *out)
     }
 }
 
-void check_equal(const size_t size, const float *cpu, const float *gpu)
-{
-    float* arr = new float[size];
-
-    const cudaError_t err = cudaGetLastError();
-    std::cout << "Error Status: " << cudaGetErrorString(err) << std::endl;
-
-    cudaMemcpy((void *)arr, (const void*)gpu, sizeof(float) * size, cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-
-    for (size_t i = 0; i < size; i++)
-    {
-        if (abs(cpu[i] - arr[i]) > 0.00001)
-        {
-            std::cout << "Arrays don't match at index " << i << ": " << cpu[i] << " != " << arr[i] << std::endl;
-            return;
-        }
-    }
-
-    delete arr;
-}
-
 int main()
 {
-    int device;
-    cudaDeviceProp props;
-    cudaGetDevice(&device);
-    cudaGetDeviceProperties_v2(&props, device);
-
     const size_t size = 2Ui64 << 24;
 
     const size_t threadsPerBlock = 512;
-    const size_t maxActiveThreads = props.maxThreadsDim[0];
-    const size_t numSMs = props.multiProcessorCount;
 
-    std::cout << "Max active threads per SM: " << maxActiveThreads << std::endl;
-    std::cout << "Number of SMs: " << numSMs << std::endl;
+    size_t maxActiveThreads;
+    size_t numSMs;
+    std::tie(maxActiveThreads, numSMs) = preamble();
 
     std::cout << "Initialising input data" << std::endl;
 
-    std::default_random_engine gen;
-    std::uniform_real_distribution<float> dist(-1.0F, 1.0F);
-    std::vector<float> inputs = {};
-    inputs.reserve(size);
-
-    for (size_t i = 0; i < size; i++)
-    {
-        inputs.push_back(dist(gen));
-    }
-
     std::cout << "Initialising inputs on the GPU" << std::endl;
+
+    std::vector<float> inputs = random_array(size);
 
     float* in;
     cudaMalloc((void **)&in, sizeof(float) * size);
