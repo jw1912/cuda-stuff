@@ -19,7 +19,11 @@ std::tuple<size_t, size_t> preamble()
     return {maxActiveThreads, numSMs};
 }
 
-std::vector<float> random_array(size_t size)
+template <typename T>
+std::vector<T> random_array(size_t size);
+
+template <>
+std::vector<float> random_array<float>(size_t size)
 {
     std::default_random_engine gen;
     std::uniform_real_distribution<float> dist(-1.0F, 1.0F);
@@ -34,12 +38,34 @@ std::vector<float> random_array(size_t size)
     return inputs;
 }
 
+template <>
+std::vector<int32_t> random_array<int32_t>(size_t size)
+{
+    std::default_random_engine gen;
+    std::uniform_int_distribution<int32_t> dist(-1, 31);
+    std::vector<int32_t> inputs = {};
+    inputs.reserve(size);
+
+    for (size_t i = 0; i < size; i++)
+    {
+        inputs.push_back(dist(gen));
+    }
+
+    return inputs;
+}
+
+void check_error()
+{
+    cudaDeviceSynchronize();
+    const cudaError_t err = cudaGetLastError();
+    std::cout << "Error Status: " << cudaGetErrorString(err) << std::endl;
+}
+
 void check_equal(const size_t size, const float *cpu, const float *gpu)
 {
     float* arr = new float[size];
 
-    const cudaError_t err = cudaGetLastError();
-    std::cout << "Error Status: " << cudaGetErrorString(err) << std::endl;
+    check_error();
 
     cudaMemcpy((void *)arr, (const void*)gpu, sizeof(float) * size, cudaMemcpyDeviceToHost);
     cudaDeviceSynchronize();

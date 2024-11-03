@@ -58,7 +58,7 @@ int main()
 
     std::cout << "Initialising inputs on the GPU" << std::endl;
 
-    std::vector<float> inputs = random_array(size);
+    std::vector<float> inputs = random_array<float>(size);
 
     float* in;
     cudaMalloc((void **)&in, sizeof(float) * size);
