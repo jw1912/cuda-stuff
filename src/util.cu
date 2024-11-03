@@ -42,7 +42,7 @@ template <>
 std::vector<int32_t> random_array<int32_t>(size_t size)
 {
     std::default_random_engine gen;
-    std::uniform_int_distribution<int32_t> dist(-1, 31);
+    std::uniform_int_distribution<int32_t> dist(-1, 767);
     std::vector<int32_t> inputs = {};
     inputs.reserve(size);
 

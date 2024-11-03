@@ -108,7 +108,7 @@ int main()
     const size_t inputs = 768;
     const size_t outputs = 2048;
     const size_t batch_size = 16384;
-    const size_t max_active = 64;
+    const size_t max_active = 32;
 
     const size_t threadsPerBlock = 512;
     const size_t reps = 32;
