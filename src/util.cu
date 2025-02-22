@@ -54,6 +54,28 @@ std::vector<int32_t> random_array<int32_t>(size_t size)
     return inputs;
 }
 
+std::vector<int32_t> random_sparse(size_t nnz, size_t batch_size)
+{
+    std::default_random_engine gen;
+    std::uniform_int_distribution<int32_t> dist(-48, 767);
+    std::vector<int32_t> inputs = {};
+    inputs.reserve(nnz * batch_size);
+
+    for (size_t i = 0; i < batch_size; i++)
+    {
+        bool ended = false;
+        for (size_t j = 0; j < nnz; j++)
+        {
+            int32_t val = ended ? -1 : dist(gen);
+            val = val < 0 ? -1 : val;
+            ended = val < 0;
+            inputs.push_back(val);
+        }
+    }
+
+    return inputs;
+}
+
 void check_error()
 {
     cudaDeviceSynchronize();

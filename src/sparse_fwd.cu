@@ -103,6 +103,28 @@ __global__ void sparseKernel3(const size_t max_active, const size_t output_size,
     ((float4 *)outputs)[output_size * blockIdx.y / 4 + elem] = make_float4(val[0], val[1], val[2], val[3]);
 }
 
+__global__ void sparseKernel4(const size_t m, const size_t nnz, const float* A, const int32_t* x, float* y)
+{
+    const int row = threadIdx.x + blockDim.x * blockIdx.x;
+    const int32_t* tx = x + nnz * blockIdx.y;
+    float* ty = y + m * blockIdx.y; 
+
+    if (row < m)
+    {
+        float sum = 0;
+        for (int i = 0; i < nnz; i += 1)
+        {
+            const int j = tx[i];
+            if (j != -1)
+            {
+                sum += A[m * j + row];
+            }
+        }
+
+        ty[row] = sum;
+    }
+}
+
 int main()
 {
     const size_t inputs = 768;
@@ -127,7 +149,7 @@ int main()
     cudaMalloc((void **)&weights_gpu, sizeof(float) * inputs * outputs);
     cudaMemcpy((void *)weights_gpu, (void *)weights.data(), sizeof(float) * inputs * outputs, cudaMemcpyHostToDevice);
 
-    std::vector<int32_t> input = random_array<int32_t>(max_active * batch_size);
+    std::vector<int32_t> input = random_sparse(max_active, batch_size);
 
     int32_t* in;
     cudaMalloc((void **)&in, sizeof(int32_t) * max_active * batch_size);
@@ -180,11 +202,24 @@ int main()
         sparseKernel3<<<grid, threadsPerBlock, max_active * sizeof(int32_t) + sizeof(float) * threadsPerBlock>>>(max_active, outputs, weights_gpu, in, out);
     }
 
+    check_equal(outputs * batch_size, expected, out);    
+    cudaMemset(out, 0, sizeof(float) * outputs * batch_size);
+    cudaDeviceSynchronize();
+
+    std::cout << "Running sparseKernel4" << std::endl;
+
+    for (size_t i = 0; i < reps; i++)
+    {
+        const size_t numChunks = (outputs + threadsPerBlock - 1) / threadsPerBlock;
+        dim3 grid(numChunks, batch_size);
+        sparseKernel4<<<grid, threadsPerBlock>>>(outputs, max_active, weights_gpu, in, out);
+    }
+
     check_equal(outputs * batch_size, expected, out);
+    cudaDeviceSynchronize();
 
     std::cout << "Done" << std::endl;
 
-    cudaDeviceSynchronize();
     cudaDeviceReset();
 
     delete expected;
