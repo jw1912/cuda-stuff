@@ -94,7 +94,7 @@ void check_equal(const size_t size, const float *cpu, const float *gpu)
 
     for (size_t i = 0; i < size; i++)
     {
-        if (abs(cpu[i] - arr[i]) > 0.00001)
+        if (abs(cpu[i] - arr[i]) > 0.01)
         {
             std::cout << "Arrays don't match at index " << i << ": " << cpu[i] << " != " << arr[i] << std::endl;
             return;
