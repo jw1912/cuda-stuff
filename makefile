@@ -1,2 +1,3 @@
 default:
-	nvcc --run src/$(TARGET).cu -o main.exe -Xptxas="-v"
+	nvcc src/$(TARGET)/main.cu -o main.exe -lcublas
+	nvprof --trace gpu main.exe

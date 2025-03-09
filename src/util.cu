@@ -1,32 +1,29 @@
+#include <chrono>
 #include <iostream>
+#include <iomanip>
 #include <random>
 #include <tuple>
 #include <vector>
 
-std::tuple<size_t, size_t> preamble()
-{
-    int device;
-    cudaDeviceProp props;
-    cudaGetDevice(&device);
-    cudaGetDeviceProperties_v2(&props, device);
+#define RUN_BODY(body) \
+    cudaDeviceSynchronize();\
+    auto t1 = std::chrono::high_resolution_clock::now();\
+    for (size_t i = 0; i < reps; i++)\
+    {\
+        body;\
+    }\
+    cudaDeviceSynchronize();\
+    auto t2 = std::chrono::high_resolution_clock::now();\
+    std::chrono::duration<double, std::milli>  time = t2 - t1;\
+    std::cout << "Average Time: ";\
+    std::cout << std::setprecision(3) << std::fixed;\
+    std::cout << time.count() / (double)reps << "ms";\
+    std::cout << std::endl;\
 
-    const size_t maxActiveThreads = props.maxThreadsDim[0];
-    const size_t numSMs = props.multiProcessorCount;
-
-    std::cout << "Max active threads per SM: " << maxActiveThreads << std::endl;
-    std::cout << "Number of SMs: " << numSMs << std::endl;
-
-    return {maxActiveThreads, numSMs};
-}
-
-template <typename T>
-std::vector<T> random_array(size_t size);
-
-template <>
-std::vector<float> random_array<float>(size_t size)
+std::vector<float> random_dense(size_t size, float start = -1.0F, float end = 1.0F)
 {
     std::default_random_engine gen;
-    std::uniform_real_distribution<float> dist(-1.0F, 1.0F);
+    std::uniform_real_distribution<float> dist(start, end);
     std::vector<float> inputs = {};
     inputs.reserve(size);
 
@@ -38,26 +35,10 @@ std::vector<float> random_array<float>(size_t size)
     return inputs;
 }
 
-template <>
-std::vector<int32_t> random_array<int32_t>(size_t size)
+std::vector<int32_t> random_sparse(size_t nnz, size_t batch_size, int32_t start = -48, int32_t end = 767)
 {
     std::default_random_engine gen;
-    std::uniform_int_distribution<int32_t> dist(-1, 767);
-    std::vector<int32_t> inputs = {};
-    inputs.reserve(size);
-
-    for (size_t i = 0; i < size; i++)
-    {
-        inputs.push_back(dist(gen));
-    }
-
-    return inputs;
-}
-
-std::vector<int32_t> random_sparse(size_t nnz, size_t batch_size)
-{
-    std::default_random_engine gen;
-    std::uniform_int_distribution<int32_t> dist(-48, 767);
+    std::uniform_int_distribution<int32_t> dist(start, end);
     std::vector<int32_t> inputs = {};
     inputs.reserve(nnz * batch_size);
 
@@ -102,4 +83,14 @@ void check_equal(const size_t size, const float *cpu, const float *gpu)
     }
 
     delete arr;
+}
+
+template<typename T>
+T* init(const std::vector<T>& values)
+{
+    T* x;
+    const size_t size = values.size();
+    cudaMalloc((void **)&x, sizeof(T) * size);
+    cudaMemcpy((void *)x, (void *)values.data(), sizeof(T) * size, cudaMemcpyHostToDevice);
+    return x;
 }
