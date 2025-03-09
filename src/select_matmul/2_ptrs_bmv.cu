@@ -11,7 +11,7 @@ __global__ void ptrs(const int32_t size, const int32_t stride, const int32_t* s,
     }
 }
 
-static void bmv(
+void bmv(
     cublasHandle_t handle, 
     const int32_t batch_size,
     const int32_t input_size,

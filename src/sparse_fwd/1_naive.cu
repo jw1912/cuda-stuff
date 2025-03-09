@@ -1,4 +1,4 @@
-__global__ static void sparse_fwd_naive_kernel(const size_t m, const size_t nnz, const float* A, const int32_t* x, float* y)
+__global__ void sparse_fwd_naive_kernel(const size_t m, const size_t nnz, const float* A, const int32_t* x, float* y)
 {
     const int row = threadIdx.x + blockDim.x * blockIdx.x;
     const int32_t* tx = x + nnz * blockIdx.y;

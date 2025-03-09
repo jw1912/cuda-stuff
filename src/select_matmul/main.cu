@@ -2,11 +2,11 @@
 #include "2_ptrs_bmv.cu"
 #include "../util.cu"
 
-static constexpr size_t inputs = 1024;
-static constexpr size_t outputs = 16;
-static constexpr size_t buckets = 8;
-static constexpr size_t batch_size = 16384;
-static constexpr size_t reps = 64;
+constexpr size_t inputs = 1024;
+constexpr size_t outputs = 16;
+constexpr size_t buckets = 8;
+constexpr size_t batch_size = 16384;
+constexpr size_t reps = 64;
 
 typedef void(*OpType)(cublasHandle_t, int32_t, int32_t, int32_t, int32_t, float*, float*, int32_t*, float*, void*);
 

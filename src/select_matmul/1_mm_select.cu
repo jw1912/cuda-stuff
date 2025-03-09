@@ -1,6 +1,6 @@
 #include "cublas_v2.h"
 
-__global__ static void select(
+__global__ void select(
     const int32_t b,
     const int32_t m,
     const int32_t n,
@@ -19,7 +19,7 @@ __global__ static void select(
     y[n * col + row] = x[m * col + n * s[col] + row];
 }
 
-static void mm(
+void mm(
     cublasHandle_t handle,
     const int32_t batch_size,
     const int32_t input_size,
