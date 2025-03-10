@@ -1,8 +1,13 @@
 #include "1_mm_select.cu"
 #include "2_ptrs_bmv.cu"
+#include "3_naive.cu"
+#include "4_cache_smem.cu"
 #include "../util.cu"
 
+// must be a multiple of 32
 constexpr size_t inputs = 1024;
+
+// arbitrary nonzero
 constexpr size_t outputs = 16;
 constexpr size_t buckets = 8;
 constexpr size_t batch_size = 16384;
@@ -37,6 +42,16 @@ int main()
 
     std::cout << "Running Broadcast Ptrs + Batched Matmul" << std::endl;
     run<PtrsThenBMV>(handle, A, x, s, y, intmdt);
+    check_equal(outputs * batch_size, expected, y);
+    cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
+
+    std::cout << "Running Naive Select Matmul" << std::endl;
+    run<NaiveSelectMatmul>(handle, A, x, s, y, intmdt);
+    check_equal(outputs * batch_size, expected, y);
+    cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
+
+    std::cout << "Running Cached SMEM Select Matmul" << std::endl;
+    run<CacheSMEMSelectMatmul>(handle, A, x, s, y, intmdt);
     check_equal(outputs * batch_size, expected, y);
 
     cublasDestroy_v2(handle);
