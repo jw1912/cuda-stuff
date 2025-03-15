@@ -1,5 +1,6 @@
 #include "1_naive.cu"
 #include "2_vectorised.cu"
+#include "3_blocktile1d.cu"
 #include "../util.cu"
 
 constexpr size_t inputs = 768;
@@ -29,7 +30,29 @@ void sparse_fwd_vectorised(const float* A, const int32_t* x, float* y)
     const size_t output_chunks = (outputs + 3) / 4;
     const size_t chunks = (output_chunks + threads - 1) / threads;
     dim3 grid(chunks, batch_size);
-    sparse_fwd_vectorised_kernel<<<grid, threads>>>(outputs, max_active, A, x, y);
+    sparse_fwd_vectorised_kernel<<<grid, threads>>>(
+        outputs / 4, 
+        max_active, 
+        reinterpret_cast<const float4 *>(A), 
+        x, 
+        reinterpret_cast<float4 *>(y)
+    );
+}
+
+void sparse_fwd_blocktiled(const float* A, const int32_t* x, float* y)
+{
+    constexpr int32_t tm = 8;
+    const size_t output_chunks = (outputs + (4 * tm - 1)) / (4 * tm);
+    const size_t req_threads = min(threads, output_chunks);
+    const size_t chunks = (output_chunks + req_threads - 1) / req_threads;
+    dim3 grid(chunks, batch_size);
+    sparse_fwd_blocktiled_kernel<tm><<<grid, req_threads>>>(
+        outputs / 4,
+        max_active,
+        reinterpret_cast<const float4 *>(A),
+        x,
+        reinterpret_cast<float4 *>(y)
+    );
 }
 
 int main()
@@ -45,10 +68,17 @@ int main()
     std::cout << "Running naive" << std::endl;
     run<sparse_fwd_naive>(A, x, y);
     cudaMemcpy((void *)expected, (const void *)y, sizeof(float) * outputs * batch_size, cudaMemcpyDeviceToHost);
+    cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
 
     std::cout << "Running vectorised" << std::endl;
     run<sparse_fwd_vectorised>(A, x, y);
     check_equal(outputs * batch_size, expected, y);
+    cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
+
+    std::cout << "Running blocktiled" << std::endl;
+    run<sparse_fwd_blocktiled>(A, x, y);
+    check_equal(outputs * batch_size, expected, y);
+    cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
 
     cudaDeviceReset();
 
