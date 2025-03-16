@@ -67,19 +67,22 @@ int main()
 
     std::cout << "Running naive" << std::endl;
     run<sparse_fwd_naive>(A, x, y);
+    check_error();
     cudaMemcpy((void *)expected, (const void *)y, sizeof(float) * outputs * batch_size, cudaMemcpyDeviceToHost);
     cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
-
+    check_error();
     std::cout << "Running vectorised" << std::endl;
     run<sparse_fwd_vectorised>(A, x, y);
+    check_error();
     check_equal(outputs * batch_size, expected, y);
     cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
-
+    check_error();
     std::cout << "Running blocktiled" << std::endl;
     run<sparse_fwd_blocktiled>(A, x, y);
+    check_error();
     check_equal(outputs * batch_size, expected, y);
     cudaMemset((void*) y, 0, sizeof(float) * outputs * batch_size);
-
+    check_error();
     cudaDeviceReset();
 
     delete expected;
